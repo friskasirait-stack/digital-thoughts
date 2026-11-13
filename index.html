@@ -119,38 +119,34 @@
         document.getElementById('btn-tambah').classList.remove('hidden');
         document.getElementById('btn-tambah').classList.add('flex');
         document.body.classList.add('admin-mode');
-        alert("Friska mode activated! You can now add or delete notes.");
+        alert("Friska mode activated!");
       }
     }
 
+    // Fungsi penampung data dari JSONP
+    window.terimaDataCatatan = function(data) {
+      allNotes = data;
+      renderNotes();
+    };
+
+    // JURUS JSONP: Memuat data seolah-olah itu script biasa (100% Anti-Blokir Apple/iOS)
     function loadNotes() {
       document.getElementById('notes-container').innerHTML = `<p class="text-center text-[#8C7A6B] col-span-full py-10 font-medium">Loading your thoughts...</p>`;
       
-      // Menggunakan allorigins versi GET yang membungkus respon dalam JSON murni (Sangat Stabil)
-      const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(API_URL);
+      const scriptId = 'jsonp-script';
+      const oldScript = document.getElementById(scriptId);
+      if (oldScript) oldScript.remove();
 
-      fetch(proxyUrl)
-        .then(response => {
-          if (!response.ok) throw new Error('Jaringan bermasalah');
-          return response.json();
-        })
-        .then(data => {
-          // data.contents berisi JSON murni dari Google Apps Script
-          allNotes = JSON.parse(data.contents);
-          renderNotes();
-        })
-        .catch(error => {
-          // Jika allorigins gagal, pindah ke proxy alternatif (corsproxy.io)
-          fetch("https://corsproxy.io/?" + encodeURIComponent(API_URL))
-            .then(res => res.json())
-            .then(data => {
-              allNotes = data;
-              renderNotes();
-            })
-            .catch(err => {
-              document.getElementById('notes-container').innerHTML = `<p class="text-center text-red-500 col-span-full py-10 font-medium">Gagal memuat. Silakan tarik layar untuk refresh.</p>`;
-            });
-        });
+      const script = document.createElement('script');
+      script.id = scriptId;
+      // Meminta data dari Apps Script dengan parameter callback
+      script.src = API_URL + "?callback=terimaDataCatatan&nocache=" + new Date().getTime();
+      
+      script.onerror = function() {
+        document.getElementById('notes-container').innerHTML = `<p class="text-center text-red-500 col-span-full py-10 font-medium">Gagal memuat. Pastikan Apps Script kamu sudah di-Deploy sebagai 'Versi Baru'.</p>`;
+      };
+      
+      document.body.appendChild(script);
     }
 
     function filterNotes(category, element) {
