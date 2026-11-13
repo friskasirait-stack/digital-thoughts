@@ -123,26 +123,22 @@
       }
     }
 
-    // Callback penerima data dari jalur JSONP
-    window.terimaDataCatatan = function(data) {
-      allNotes = data;
-      renderNotes();
-    };
-
-    // Memuat catatan lewat tag <script> (100% bebas error Failed to fetch / CORS)
+    // JURUS PAMUNGKAS: Proxy Fetch untuk Bypass Sistem Keamanan HP/Apple/Instagram
     function loadNotes() {
       document.getElementById('notes-container').innerHTML = `<p class="text-center text-[#8C7A6B] col-span-full py-10 font-medium">Loading your thoughts...</p>`;
       
-      const oldScript = document.getElementById('jsonp-script');
-      if (oldScript) oldScript.remove();
+      const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(API_URL);
 
-      const script = document.createElement('script');
-      script.id = 'jsonp-script';
-      script.src = API_URL + "?callback=terimaDataCatatan&t=" + new Date().getTime();
-      script.onerror = function() {
-        document.getElementById('notes-container').innerHTML = `<p class="text-center text-red-500 col-span-full py-10 font-medium">Gagal memuat data. Pastikan sudah Deploy -> Versi Baru di Apps Script.</p>`;
-      };
-      document.body.appendChild(script);
+      fetch(proxyUrl)
+        .then(response => response.json())
+        .then(data => {
+          allNotes = data;
+          renderNotes();
+        })
+        .catch(error => {
+          console.error("Fetch error:", error);
+          document.getElementById('notes-container').innerHTML = `<p class="text-center text-red-500 col-span-full py-10 font-medium">Server sedang padat, silakan refresh layar.</p>`;
+        });
     }
 
     function filterNotes(category, element) {
