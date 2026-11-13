@@ -104,9 +104,6 @@
   </div>
 
   <script>
-    // -------------------------------------------------------------
-    // GANTI URL DI BAWAH INI DENGAN URL WEB APP DARI GOOGLE APPS SCRIPT
-    // -------------------------------------------------------------
     const API_URL = "https://script.google.com/macros/s/AKfycbxL6UHsk6TzTGlsf4oOxTVdTO9WzOZwasGCEGEopNgQ0RvvJ2axCu6zSN-pBR51abliBA/exec";
     
     let mySecretPin = "";
@@ -126,29 +123,29 @@
       }
     }
 
-    // Mengambil data pakai Fetch API (Bukan google.script.run lagi)
     function loadNotes() {
       document.getElementById('notes-container').innerHTML = `<p class="text-center text-[#8C7A6B] col-span-full py-10 font-medium">Loading your thoughts...</p>`;
       
-      fetch(API_URL)
-        .then(response => response.json())
-        .then(data => {
-          allNotes = data;
-          renderNotes();
-        })
-        .catch(error => {
-          document.getElementById('notes-container').innerHTML = `<p class="text-center text-red-500 col-span-full py-10 font-medium">Gagal memuat data. Cek link API.</p>`;
-        });
+      fetch(API_URL, {
+        method: "GET",
+        redirect: "follow"
+      })
+      .then(response => response.text())
+      .then(text => {
+        allNotes = JSON.parse(text);
+        renderNotes();
+      })
+      .catch(error => {
+        console.error("Fetch error detail:", error);
+        document.getElementById('notes-container').innerHTML = `<p class="text-center text-red-500 col-span-full py-10 font-medium">Gagal memuat data: ${error.message}</p>`;
+      });
     }
 
     function filterNotes(category, element) {
       currentFilter = category;
-      
-      // Update styling tombol aktif
       const buttons = document.querySelectorAll('#category-nav button');
       buttons.forEach(btn => btn.classList.remove('active', 'text-white'));
       element.classList.add('active');
-      
       renderNotes();
     }
 
@@ -156,7 +153,6 @@
       const container = document.getElementById('notes-container');
       container.innerHTML = '';
       
-      // Filter logic sudah aktif di sini!
       const filteredNotes = currentFilter === 'All' ? allNotes : allNotes.filter(n => n.category === currentFilter);
       
       if (filteredNotes.length === 0) {
@@ -183,7 +179,6 @@
       });
     }
 
-    // -- Logika Modal Baca & Tulis Sama Seperti Sebelumnya -- //
     function openReadModal(id) {
       const note = allNotes.find(n => n.id === id);
       if(note) {
@@ -194,14 +189,17 @@
         document.getElementById('readModal').classList.add('flex');
       }
     }
+
     function closeReadModal() {
       document.getElementById('readModal').classList.add('hidden');
       document.getElementById('readModal').classList.remove('flex');
     }
+
     function openWriteModal() {
       document.getElementById('writeModal').classList.remove('hidden');
       document.getElementById('writeModal').classList.add('flex');
     }
+
     function closeWriteModal() {
       document.getElementById('writeModal').classList.add('hidden');
       document.getElementById('writeModal').classList.remove('flex');
@@ -209,7 +207,6 @@
       document.getElementById('isi').value = '';
     }
 
-    // Menyimpan data pakai HTTP POST
     function submitNote() {
       const kategori = document.getElementById('kategori').value;
       const judul = document.getElementById('judul').value;
@@ -221,27 +218,35 @@
 
       fetch(API_URL, {
         method: 'POST',
+        redirect: 'follow',
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action: 'save', pin: mySecretPin, category: kategori, title: judul, content: isi })
       })
-      .then(res => res.json())
-      .then(response => {
+      .then(res => res.text())
+      .then(text => {
+        const response = JSON.parse(text);
         btn.innerText = 'Save Note'; btn.disabled = false;
         if(response.success) { closeWriteModal(); loadNotes(); } 
         else { alert(response.message); }
       })
-      .catch(err => { btn.innerText = 'Save Note'; btn.disabled = false; alert("Gagal menyimpan jaringan error."); });
+      .catch(err => { 
+        btn.innerText = 'Save Note'; btn.disabled = false; 
+        alert("Gagal menyimpan: " + err.message); 
+      });
     }
 
-    // Menghapus data pakai HTTP POST
     function hapusNote(event, id) {
       event.stopPropagation(); 
       if(confirm("Are you sure you want to delete this note?")) {
         fetch(API_URL, {
           method: 'POST',
+          redirect: 'follow',
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({ action: 'delete', pin: mySecretPin, id: id })
         })
-        .then(res => res.json())
-        .then(response => {
+        .then(res => res.text())
+        .then(text => {
+          const response = JSON.parse(text);
           if(response.success) { loadNotes(); } 
           else { alert(response.message); }
         });
