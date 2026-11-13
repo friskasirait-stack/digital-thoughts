@@ -123,21 +123,33 @@
       }
     }
 
-    // JURUS PAMUNGKAS: Proxy Fetch untuk Bypass Sistem Keamanan HP/Apple/Instagram
     function loadNotes() {
       document.getElementById('notes-container').innerHTML = `<p class="text-center text-[#8C7A6B] col-span-full py-10 font-medium">Loading your thoughts...</p>`;
       
-      const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(API_URL);
+      // Menggunakan allorigins versi GET yang membungkus respon dalam JSON murni (Sangat Stabil)
+      const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(API_URL);
 
       fetch(proxyUrl)
-        .then(response => response.json())
+        .then(response => {
+          if (!response.ok) throw new Error('Jaringan bermasalah');
+          return response.json();
+        })
         .then(data => {
-          allNotes = data;
+          // data.contents berisi JSON murni dari Google Apps Script
+          allNotes = JSON.parse(data.contents);
           renderNotes();
         })
         .catch(error => {
-          console.error("Fetch error:", error);
-          document.getElementById('notes-container').innerHTML = `<p class="text-center text-red-500 col-span-full py-10 font-medium">Server sedang padat, silakan refresh layar.</p>`;
+          // Jika allorigins gagal, pindah ke proxy alternatif (corsproxy.io)
+          fetch("https://corsproxy.io/?" + encodeURIComponent(API_URL))
+            .then(res => res.json())
+            .then(data => {
+              allNotes = data;
+              renderNotes();
+            })
+            .catch(err => {
+              document.getElementById('notes-container').innerHTML = `<p class="text-center text-red-500 col-span-full py-10 font-medium">Gagal memuat. Silakan tarik layar untuk refresh.</p>`;
+            });
         });
     }
 
