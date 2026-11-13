@@ -123,22 +123,26 @@
       }
     }
 
+    // Callback penerima data dari jalur JSONP
+    window.terimaDataCatatan = function(data) {
+      allNotes = data;
+      renderNotes();
+    };
+
+    // Memuat catatan lewat tag <script> (100% bebas error Failed to fetch / CORS)
     function loadNotes() {
       document.getElementById('notes-container').innerHTML = `<p class="text-center text-[#8C7A6B] col-span-full py-10 font-medium">Loading your thoughts...</p>`;
       
-      fetch(API_URL, {
-        method: "GET",
-        redirect: "follow"
-      })
-      .then(response => response.text())
-      .then(text => {
-        allNotes = JSON.parse(text);
-        renderNotes();
-      })
-      .catch(error => {
-        console.error("Fetch error detail:", error);
-        document.getElementById('notes-container').innerHTML = `<p class="text-center text-red-500 col-span-full py-10 font-medium">Gagal memuat data: ${error.message}</p>`;
-      });
+      const oldScript = document.getElementById('jsonp-script');
+      if (oldScript) oldScript.remove();
+
+      const script = document.createElement('script');
+      script.id = 'jsonp-script';
+      script.src = API_URL + "?callback=terimaDataCatatan&t=" + new Date().getTime();
+      script.onerror = function() {
+        document.getElementById('notes-container').innerHTML = `<p class="text-center text-red-500 col-span-full py-10 font-medium">Gagal memuat data. Pastikan sudah Deploy -> Versi Baru di Apps Script.</p>`;
+      };
+      document.body.appendChild(script);
     }
 
     function filterNotes(category, element) {
@@ -218,16 +222,14 @@
 
       fetch(API_URL, {
         method: 'POST',
-        redirect: 'follow',
+        mode: 'no-cors',
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action: 'save', pin: mySecretPin, category: kategori, title: judul, content: isi })
       })
-      .then(res => res.text())
-      .then(text => {
-        const response = JSON.parse(text);
+      .then(() => {
         btn.innerText = 'Save Note'; btn.disabled = false;
-        if(response.success) { closeWriteModal(); loadNotes(); } 
-        else { alert(response.message); }
+        closeWriteModal();
+        setTimeout(loadNotes, 1000);
       })
       .catch(err => { 
         btn.innerText = 'Save Note'; btn.disabled = false; 
@@ -240,15 +242,12 @@
       if(confirm("Are you sure you want to delete this note?")) {
         fetch(API_URL, {
           method: 'POST',
-          redirect: 'follow',
+          mode: 'no-cors',
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({ action: 'delete', pin: mySecretPin, id: id })
         })
-        .then(res => res.text())
-        .then(text => {
-          const response = JSON.parse(text);
-          if(response.success) { loadNotes(); } 
-          else { alert(response.message); }
+        .then(() => {
+          setTimeout(loadNotes, 1000);
         });
       }
     }
